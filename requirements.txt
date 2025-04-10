@@ -1,0 +1,5 @@
+pymc
+numpy 
+networkx
+matplotlib
+unittest
