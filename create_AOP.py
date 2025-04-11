@@ -120,7 +120,7 @@ def find_AO_and_MIE(result):
 def collect_connections_in_AOP(result):
     connections = []
     seen = set()  # This will keep track of items we've already seen
-
+    print(result)
     for binding in result["results"]["bindings"]:
         if "KE_dwn" in binding:
             conn = (binding['KE_up']["value"].split("/")[-1],

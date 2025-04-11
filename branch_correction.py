@@ -15,7 +15,10 @@ class fill_method(Enum):
 
 
 def hill_activation(dose, ac50, hill_coefficient=1):
-    return (dose ** hill_coefficient) / ((dose ** hill_coefficient) + (ac50 ** hill_coefficient))
+    numerator = dose ** hill_coefficient
+    powered_AC = ac50 ** hill_coefficient
+    denominator = numerator + powered_AC
+    return numerator / denominator
 
 
 def calculate_node_activation_probability(AOP, dose, hill_coefficient=1):
@@ -339,6 +342,8 @@ def run_dose_responseV1(AOP, dose, proba_provided=False, bayesian_update=False):
 def run_dose_response(AOP, dose, calculated_node, proba_provided=False, bayesian_update=False ):
     # Step 1: Handle loops
     remove_useless_connections(AOP)
+    
+
 
     if not proba_provided:
         # Step 2: calculate_node_activation_probability
@@ -471,18 +476,35 @@ def clean_up_AOP(AOP):
         node: {
             "name": details["name"],
             "connections": details["connections"],
-            "genes": details["genes"],
             "AC50": details["AC50"]
             } for node, details in AOP.items()
     }
+    for node in AOP:
+        try:
+            new_AOP["KE_id"] = AOP["KE_id"]
+        except:
+            pass
+    for node in AOP:
+        try:
+            new_AOP["genes"] = AOP["genes"]
+        except:
+            pass
     return new_AOP
 
 
 def run_dose_response_on_partial_AOP(AOP, dose, calculated_node = "AO0", selected_nodes = None, proba_provided=True):
+    
     if selected_nodes is not None:
         new_AOP = {node: AOP[node] for node in AOP if node in selected_nodes}
         clean_invalid_connections(new_AOP)
         AOP = clean_up_AOP(new_AOP)
+
+    try:
+        for node in AOP:
+            AOP[node]["P(prior|event)"] += 0
+    except:
+        proba_provided=False
+
     return run_dose_response(AOP, dose, calculated_node=calculated_node, proba_provided=proba_provided)
 
 
@@ -535,6 +557,7 @@ def complete_ac50_values(AOP, method=fill_method.AVERAGE, max_val=0,  min_val=0)
 
 def run_goat_dose_response(AOP_id, dose, calculated_node = "AO0", AC50_values=None, probability_values=None, selected_nodes = None, method=fill_method.MEDIAN, max_ac50=0,  min_ac50=0):
     AOP = create_AOP_from_scratch(AOP_id)
+    
 
     if AC50_values:
         add_AOP_variable_by_keid(AOP,AC50_values)
@@ -549,10 +572,6 @@ def run_goat_dose_response(AOP_id, dose, calculated_node = "AO0", AC50_values=No
         proba = run_dose_response_on_partial_AOP(AOP, dose, selected_nodes=selected_nodes, calculated_node=calculated_node, proba_provided=False)
     return AOP, proba
 
-if __name__ == "__main__":
-    AOP, proba = run_goat_dose_response("17",1000)
-    print(proba)
-    print(AOP)
 
 if __name__ == "__main__ ":
     from icecream import ic
