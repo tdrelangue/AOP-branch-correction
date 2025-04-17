@@ -201,7 +201,6 @@ def collect_connections_in_AOP(result):
 
     connections = []
     seen = set()  # This will keep track of items we've already seen
-    print(result)
     for binding in result["results"]["bindings"]:
         if "KE_dwn" in binding:
             conn = (binding['KE_up']["value"].split("/")[-1],
@@ -239,7 +238,7 @@ def add_connections_to_AOP(connections, AOP):
                 AOP[node]["connections"].append(connection[1])
 
 
-def create_AOP_from_scratch(aop_id):
+def create_AOP_from_scratch(aop_id, manualKEEdges=None):
     """
     Main wrapper function to create a fully structured AOP graph from an AOP ID.
 
@@ -258,14 +257,26 @@ def create_AOP_from_scratch(aop_id):
     - dict: Final AOP graph with all nodes and their connections.
     """
 
+    # Step 1: Retrieve raw AOP data
     result = aop_dump(aop_id)
+
+    # Step 2: Extract connection 
     connections = collect_connections_in_AOP(result)
+    if manualKEEdges:
+        print(f"Using manual KE edges: {manualKEEdges}")
+        for connection in manualKEEdges:
+            connections.append(connection)
+
+    # Step 3: collect and order the nodes in order of apparition
     MIES, AOS = find_AO_and_MIE(result)
     ordered_nodes = get_nodes_in_apparition_order(result, connections)
+
+    # Step 4: Build base AOP structure
     AOP = build_AOP(result, MIES, AOS, ordered_nodes)
+
+    # Step 5: Add connections (manual if provided, else default)
     add_connections_to_AOP(connections, AOP)
     return AOP
-
 
 def add_proba_by_keid(AOP, proba):
     """
@@ -282,19 +293,8 @@ def add_proba_by_keid(AOP, proba):
     add_AOP_variable_by_keid(AOP=AOP, new_var_dict=proba, new_var_name="P(prior|event)")
 
 if __name__ == "__main__":
-    aop_id = "131"  # Replace with a valid AOP ID
-    AOP = create_AOP_from_scratch(aop_id=aop_id)
+    aop_id = "372"  # Replace with a valid AOP ID
+    AOP = create_AOP_from_scratch(aop_id=aop_id,manualKEEdges=[('26', '1614'), ('1614', '286'), ('286', '1616'), ('1616', '1839')])
 
-    # Try the add AC50
-    result = aop_dump(aop_id)
-    connections = collect_connections_in_AOP(result)
-    ordered_nodes = get_nodes_in_apparition_order(result, connections)
-    acs={KE:20 for KE in ordered_nodes}
-    add_AOP_variable_by_keid(AOP=AOP, new_var_dict=acs, new_var_name="AC50")
-
-    # Try proba
-    proba={KE:0.98 for KE in ordered_nodes}
-
-    add_proba_by_keid(AOP, proba)
 
     print(AOP)
